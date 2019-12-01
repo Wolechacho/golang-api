@@ -12,48 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"first-api-golang/models"
 )
-
-type Category struct {
-	CategoryName string
-	Description  string
-}
-
-type Product struct {
-	ProductName  string
-	UnitPrice    float64
-	UnitInStock  int
-	Discontinued bool
-	CategoryInfo primitive.ObjectID
-}
-type Order struct {
-	OrderDate    time.Time
-	ShippedDate  time.Time
-	ShipName     string
-	ShipAddress  string
-	OrderDetails []OrderDetails
-	EmployeeInfo interface{}
-	CustomerInfo interface{}
-}
-
-type OrderDetails struct {
-	UnitPrice   float64
-	Quantity    int
-	Discount    float64
-	ProductInfo primitive.ObjectID
-}
-
-type Employee struct {
-	ContactName string
-	Address     string
-	City        string
-}
-
-type Customer struct {
-	ContactName string
-	Address     string
-	City        string
-}
 
 var client *mongo.Client
 var err error
@@ -101,7 +62,7 @@ func connectToMongoDb() {
 func saveCategory() {
 	collection := client.Database("northwind").Collection("categories")
 
-	newcategory := Category{CategoryName: "Kitchen Utensils", Description: "Used for house chores"}
+	newcategory := models.Category{CategoryName: "Kitchen Utensils", Description: "Used for house chores"}
 
 	insertResult, err := collection.InsertOne(context.TODO(), newcategory)
 	if err != nil {
@@ -117,7 +78,7 @@ func saveProduct() {
 	if err != nil {
 		log.Fatalln("Could not convert hex number to ObjectId")
 	}
-	newproduct := Product{
+	newproduct := models.Product{
 		ProductName:  "Yeezy",
 		UnitPrice:    200.0,
 		UnitInStock:  4,
@@ -132,8 +93,8 @@ func saveProduct() {
 	fmt.Println("Inserted a Single Product Document: ", insertResult.InsertedID)
 }
 
-func getProducts() []Product {
-	var fetchedProducts []Product
+func getProducts() []models.Product {
+	var fetchedProducts []models.Product
 	collection := client.Database("northwind").Collection("products")
 
 	cur, err := collection.Find(context.TODO(), bson.D{}, options.Find())
@@ -141,7 +102,7 @@ func getProducts() []Product {
 		log.Fatal(err)
 	}
 	for cur.Next(context.TODO()) {
-		var product Product
+		var product models.Product
 		err := cur.Decode(&product)
 		if err != nil {
 			log.Fatal(err)
@@ -155,12 +116,12 @@ func getProducts() []Product {
 	return fetchedProducts
 }
 
-func getProductByID(id string) Product {
+func getProductByID(id string) models.Product {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var product Product
+	var product models.Product
 	collection := client.Database("northwind").Collection("products")
 	err = collection.FindOne(context.TODO(), bson.M{"_id": oid}, options.FindOne()).Decode(&product)
 	if err != nil {
@@ -196,7 +157,7 @@ func saveOrder() {
 	}
 	err = mongo.WithSession(context.TODO(), sess, func(sc mongo.SessionContext) error {
 		collection := client.Database("northwind").Collection("employees")
-		employee := Employee{
+		employee := models.Employee{
 			ContactName: "Wole Adenigbagbe",
 			City:        "Lekki",
 			Address:     "Lekki Lagos",
@@ -209,7 +170,7 @@ func saveOrder() {
 		}
 
 		collection = client.Database("northwind").Collection("customers")
-		customer := Customer{
+		customer := models.Customer{
 			ContactName: "Ogunyemi Femi",
 			City:        "Idumota",
 			Address:     "Mainland Lagos",
@@ -227,8 +188,8 @@ func saveOrder() {
 			sess.AbortTransaction(context.TODO())
 			log.Fatal("Could not convert product id hex of mongodb ObjectId", err)
 		}
-		items := make([]OrderDetails, 0)
-		item := OrderDetails{
+		items := make([]models.OrderDetails, 0)
+		item := models.OrderDetails{
 			UnitPrice:   40.0,
 			Quantity:    4,
 			ProductInfo: poid,
@@ -237,7 +198,7 @@ func saveOrder() {
 		items = append(items, item)
 		fmt.Printf("Cart to be added %+v : ", items)
 
-		cart := Order{
+		cart := models.Order{
 			OrderDate:    time.Now(),
 			ShippedDate:  time.Now(),
 			ShipName:     "Adele Voyage",
