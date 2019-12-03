@@ -12,7 +12,7 @@ func main() {
 	helpers.ConnectToMongoDb()
 
 	router := routers.RegisterRoutes()
-	err := http.ListenAndServe(":3031", router)
+	err := http.ListenAndServe(":3030", router)
 	if err != nil {
 		log.Fatal(err)
 	}
