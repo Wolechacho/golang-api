@@ -3,7 +3,6 @@ package models
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -22,68 +21,64 @@ type Product struct {
 }
 
 //SaveProduct -- insert a new product to the db
-func (p *Product) SaveProduct(product *Product) {
+func (p *Product) SaveProduct(product *Product) error {
 	collection := helpers.Client.Database("northwind").Collection("products")
 
 	insertResult, err := collection.InsertOne(context.TODO(), product)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Product not saved %v", err)
 	}
 	fmt.Println("Inserted a Single Product Document: ", insertResult.InsertedID)
+	return nil
 }
 
 //GetProducts -- get all products document from the db
-func (p *Product) GetProducts() []Product {
+func (p *Product) GetProducts() ([]Product, error) {
 	var fetchedProducts []Product
 	collection := helpers.Client.Database("northwind").Collection("products")
 
 	cur, err := collection.Find(context.TODO(), bson.D{}, options.Find())
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Error retrieving products %v", err)
 	}
 	for cur.Next(context.TODO()) {
 		var product Product
-		err := cur.Decode(&product)
-		if err != nil {
-			log.Fatal(err)
-		}
+		_ = cur.Decode(&product)
 		fetchedProducts = append(fetchedProducts, product)
 	}
 	if err := cur.Err(); err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return nil, fmt.Errorf("Error retrieving products %v", err)
 	}
 	cur.Close(context.TODO())
-	return fetchedProducts
+	return fetchedProducts, nil
 }
 
 //GetProductByID -- get a product document with the hex id
-func (p *Product) GetProductByID(id string) Product {
+func (p *Product) GetProductByID(id string) (interface{}, error) {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Could not convert hex id : %v", err)
 	}
 	var product Product
 	collection := helpers.Client.Database("northwind").Collection("products")
 	err = collection.FindOne(context.TODO(), bson.M{"_id": oid}, options.FindOne()).Decode(&product)
 	if err != nil {
-		log.Fatal(err)
+		return nil, fmt.Errorf("Could not retrieve the  product : %v", err)
 	}
-	return product
+	return product, nil
 }
 
 //DeleteProductByID -- delete a product document with hex id
-func (p *Product) DeleteProductByID(id string) {
+func (p *Product) DeleteProductByID(id string) error {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("could not convert hex _id : %v", err)
 	}
 	collection := helpers.Client.Database("northwind").Collection("products")
 	result, err := collection.DeleteOne(context.TODO(), bson.M{"_id": oid}, options.Delete())
-	if err != nil {
-		log.Fatal(err)
-	}
 	if result.DeletedCount != 1 {
-		log.Fatal(err)
+		return fmt.Errorf("could not delete the product : %v", err)
 	}
-	fmt.Printf("Number of product deleted  : %d\n", result.DeletedCount)
+	return nil
 }
