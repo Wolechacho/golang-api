@@ -62,8 +62,6 @@ func FormatConnectionString(filename string) string {
 	}
 
 	//remove the last occurence of comma (,)
-	pos := strings.LastIndex(sb.String(), ",")
-	fmt.Println("Last Pos : ", pos)
 	s := sb.String()
 	s = s[:len(s)-1]
 
@@ -76,7 +74,6 @@ func FormatConnectionString(filename string) string {
 
 //ReadYamlFromFile -- read the file content using filename
 func ReadYamlFromFile(filename string) []byte {
-	fmt.Println("Parsing YAML file")
 	if filename == "" {
 		log.Fatalln("FileName in Empty")
 	}
@@ -87,10 +84,3 @@ func ReadYamlFromFile(filename string) []byte {
 	}
 	return b
 }
-
-//ReplaceAtIndex - replace a character
-// func ReplaceAtIndex(in string, r rune, i int) string {
-// 	out := []rune(in)
-// 	out[i] = r
-// 	return string(out)
-// }

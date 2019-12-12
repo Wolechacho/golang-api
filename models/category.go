@@ -2,8 +2,8 @@ package models
 
 import (
 	"context"
+	"first-api-golang/helpers"
 	"fmt"
-	"log"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -13,18 +13,20 @@ var err error
 
 //Category groups the product
 type Category struct {
-	CategoryName string
-	Description  string
+	CategoryName string `json:"categoryName"`
+	Description  string `json:"description"`
 }
 
-func (c *Category) saveCategory() {
-	collection := client.Database("northwind").Collection("categories")
+//SaveCategory -- save categories of product into the DB
+func (c *Category) SaveCategory(category *Category) error {
+	collection := helpers.Client.Database("northwind").Collection("categories")
 
-	newcategory := Category{CategoryName: "Kitchen Utensils", Description: "Used for house chores"}
-
+	newcategory := Category{CategoryName: category.CategoryName, Description: category.Description}
 	insertResult, err := collection.InsertOne(context.TODO(), newcategory)
+
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Cagetory not saved %+v", err)
 	}
 	fmt.Println("Inserted a Single Category Document : ", insertResult.InsertedID)
+	return nil
 }

@@ -2,94 +2,84 @@ package models
 
 import (
 	"context"
+	"first-api-golang/helpers"
 	"fmt"
-	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 //Order model specifies the cart information
 type Order struct {
-	OrderDate    time.Time
-	ShippedDate  time.Time
-	ShipName     string
-	ShipAddress  string
-	OrderDetails []OrderDetails
-	EmployeeInfo interface{}
-	CustomerInfo interface{}
+	OrderDate        time.Time      `json:"orderDate"`
+	ShippedDate      time.Time      `json:"shippedDate"`
+	ShipName         string         `json:"shipName"`
+	ShipAddress      string         `json:"shipAddress"`
+	OrderDetailsList []OrderDetails `json:"orderDetails"`
+	Employee         Employee       `json:"employee"`
+	Customer         Customer       `json:"customer"`
 }
 
-func (o *Order) saveOrder() {
-	sess, err := client.StartSession()
+//SaveOrder -- Insert customer order
+func (o *Order) SaveOrder(order *Order) error {
+	sess, err := helpers.Client.StartSession()
 	if err != nil {
-		log.Fatal("Could not start Session", err)
+		return fmt.Errorf("Could not start Session : %+v", err)
 	}
 	err = sess.StartTransaction()
 	if err != nil {
-		log.Fatal("Could not start Transaction", err)
+		return fmt.Errorf("Could not start Transaction : %+v", err)
 	}
 	err = mongo.WithSession(context.TODO(), sess, func(sc mongo.SessionContext) error {
-		collection := client.Database("northwind").Collection("employees")
+		collection := helpers.Client.Database("northwind").Collection("employees")
 		employee := Employee{
-			ContactName: "Wole Adenigbagbe",
-			City:        "Lekki",
-			Address:     "Lekki Lagos",
+			ContactName: order.Employee.ContactName,
+			City:        order.Employee.City,
+			Address:     order.Employee.Address,
 		}
 		var empresult *mongo.InsertOneResult
 		empresult, err = collection.InsertOne(sc, employee)
 		if err != nil {
 			sess.AbortTransaction(context.TODO())
-			log.Fatal("Could not insert record to employee table", err)
+			return fmt.Errorf("Could not insert record to employee table : %+v", err)
 		}
 
-		collection = client.Database("northwind").Collection("customers")
+		collection = helpers.Client.Database("northwind").Collection("customers")
 		customer := Customer{
-			ContactName: "Ogunyemi Femi",
-			City:        "Idumota",
-			Address:     "Mainland Lagos",
+			ContactName: order.Customer.ContactName,
+			City:        order.Customer.City,
+			Address:     order.Customer.Address,
 		}
 		var custresult *mongo.InsertOneResult
 		custresult, err = collection.InsertOne(sc, customer)
 		if err != nil {
 			sess.AbortTransaction(context.TODO())
-			log.Fatal("Could not insert record to customer table", err)
+			return fmt.Errorf("Could not insert record to customer table: %+v", err)
 		}
-
-		var poid primitive.ObjectID
-		poid, err = primitive.ObjectIDFromHex("5ddae8d3a4c9080554c1b4e4")
-		if err != nil {
-			sess.AbortTransaction(context.TODO())
-			log.Fatal("Could not convert product id hex of mongodb ObjectId", err)
-		}
-		items := make([]OrderDetails, 0)
-		item := OrderDetails{
-			UnitPrice:   40.0,
-			Quantity:    4,
-			ProductInfo: poid,
-			Discount:    2.0,
-		}
-		items = append(items, item)
-		fmt.Printf("Cart to be added %+v : ", items)
-
-		cart := Order{
+		cart := struct {
+			OrderDate    time.Time
+			ShippedDate  time.Time
+			ShipName     string
+			ShipAddress  string
+			EmployeeInfo interface{}
+			CustomerInfo interface{}
+			OrderDetails []OrderDetails
+		}{
 			OrderDate:    time.Now(),
 			ShippedDate:  time.Now(),
-			ShipName:     "Adele Voyage",
-			ShipAddress:  "Lekki Lagos",
+			ShipName:     order.ShipName,
+			ShipAddress:  order.ShipAddress,
 			EmployeeInfo: empresult.InsertedID,
 			CustomerInfo: custresult.InsertedID,
-			OrderDetails: items,
+			OrderDetails: order.OrderDetailsList,
 		}
-
-		collection = client.Database("northwind").Collection("orders")
+		collection = helpers.Client.Database("northwind").Collection("orders")
 		var orderresult *mongo.InsertOneResult
 		orderresult, err = collection.InsertOne(sc, cart)
 
 		if err != nil {
 			sess.AbortTransaction(context.TODO())
-			log.Fatal("Could not insert record to order table", err)
+			return fmt.Errorf("Could not insert record to order table : %+v", err)
 		}
 
 		sess.CommitTransaction(context.TODO())
@@ -97,4 +87,5 @@ func (o *Order) saveOrder() {
 		return nil
 	})
 	sess.EndSession(context.TODO())
+	return nil
 }
